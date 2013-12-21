@@ -1,23 +1,20 @@
 import Data.Time.Calendar
--- import Data.Time.Calendar.Julian
 import Data.Time.LocalTime
 import Network.HTTP
 import System.Environment
 import Text.Read
+import HipWorktime.History
 
 -- 時刻範囲
 data TimeRange = TimeRange LocalTime LocalTime
 
--- ユーザ (id, name)
-data User = User String String
-
-data Message = Message LocalTime User String
-
 {-
-日に対応するメッセージを取得する
+日に対応するメッセージを取得する。
+システムのタイムゾーンを用いる。
 -}
 fetchMessages :: Day -> IO [Message]
-fetchMessages = undefined
+fetchMessages day =
+  return [Message (LocalTime day (TimeOfDay 0 0 0)) (User "a" "hoge") "aaa"]
 
 {-
 時刻範囲を取り出す
@@ -63,5 +60,7 @@ main :: IO()
 main =  do
   day <- getDay
   case day of
-    Just d -> print $ getMonthDays d
+    Just d -> do
+       messages <- mapM fetchMessages $ getMonthDays d
+       print messages
     Nothing -> putStrLn "Invalid day. Input year and month."
