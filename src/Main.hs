@@ -2,8 +2,11 @@ import Data.Time.Calendar
 import Data.Time.LocalTime
 import Network.HTTP
 import System.Environment
+import System.FilePath
 import Text.Read
+
 import HipWorktime.History
+import HipWorktime.Config
 
 -- 時刻範囲
 data TimeRange = TimeRange LocalTime LocalTime
@@ -13,7 +16,8 @@ data TimeRange = TimeRange LocalTime LocalTime
 システムのタイムゾーンを用いる。
 -}
 fetchMessages :: Day -> IO [Message]
-fetchMessages day =
+fetchMessages day = do
+  (token, room) <- readConfig
   return [Message (LocalTime day (TimeOfDay 0 0 0)) (User "a" "hoge") "aaa"]
 
 {-

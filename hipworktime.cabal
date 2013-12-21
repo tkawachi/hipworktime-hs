@@ -40,7 +40,9 @@ executable hipworktime
   build-depends:
       base >= 4.4 && < 5,
       HTTP == 4000.2.10,
-      time == 1.4.1
+      time >= 1.4 && < 1.5,
+      filepath,
+      directory
 
 test-suite doctests
   type:    exitcode-stdio-1.0
