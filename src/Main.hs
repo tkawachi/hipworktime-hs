@@ -16,7 +16,7 @@ data Message = Message LocalTime User String
 {-
 日に対応するメッセージを取得する
 -}
-fetchMessages :: Day -> IO ([Message])
+fetchMessages :: Day -> IO [Message]
 fetchMessages = undefined
 
 {-
@@ -36,7 +36,7 @@ normalize = undefined
 -}
 getDay :: IO (Maybe Day)
 getDay = do
-  maybeInts <- fmap (map readMaybe) getArgs :: IO ([Maybe Int])
+  maybeInts <- fmap (map readMaybe) getArgs :: IO [Maybe Int]
   case maybeInts of
     [Just y, Just m] -> return (fromGregorianValid (toInteger y) m 1)
     _ -> return Nothing
@@ -52,7 +52,7 @@ getMonthDays day =
   in
    map (fromGregorian y m) [1..monthLen]
 
-fetch :: IO (String)
+fetch :: IO String
 fetch = do
       rsp <- Network.HTTP.simpleHTTP (getRequest "http://www.google.co.jp/")
               -- fetch document and return it (as a 'String'.)
