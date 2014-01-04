@@ -62,7 +62,7 @@ isOverDay now day zone =
   let
     endOfDay = ZonedTime (LocalTime day (TimeOfDay 23 59 60)) zone
   in
-   (zonedTimeToUTC now) > (zonedTimeToUTC endOfDay)
+   zonedTimeToUTC now > zonedTimeToUTC endOfDay
 
 {-
 特定日の履歴を得る。
