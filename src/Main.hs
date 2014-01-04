@@ -1,15 +1,20 @@
-import Data.Time.Calendar
-import Data.Time.LocalTime
---import Network.HTTP
-import System.Environment
-import System.FilePath
-import Text.Read
+import Data.Time.Calendar (
+  Day, fromGregorianValid, toGregorian, gregorianMonthLength, fromGregorian
+  )
+import Data.Time.LocalTime (LocalTime, getCurrentTimeZone)
+import System.Environment (getArgs)
+import Text.Read (readMaybe)
 
-import HipWorktime.History
-import HipWorktime.Config
+import HipWorktime.History (Message (Message), fetchHistory, User (User))
+import HipWorktime.Config (readConfig)
 
 -- 時刻範囲
 data TimeRange = TimeRange LocalTime LocalTime deriving (Show)
+
+isMyMessage :: String -> Message -> Bool
+isMyMessage uid message = case message of
+  Message _ (User uid' _) _ | uid' == uid -> True
+  _ -> False
 
 {-
 日に対応するメッセージを取得する。
@@ -20,11 +25,7 @@ fetchMessages day = do
   (token, room, uid) <- readConfig
   zone <- getCurrentTimeZone
   messages <- fetchHistory token room day zone
-  return (filter isMine messages)
-    where
-      isMine message = case message of
-        Message _ (User uid _) _ -> True
-        _ -> False
+  return (filter (isMyMessage uid) messages)
 
 {-
 時刻範囲を取り出す
@@ -54,7 +55,7 @@ getDayFromArg = do
 getMonthDays :: Day -> [Day]
 getMonthDays day =
   let
-    (y, m, d) = toGregorian day
+    (y, m, _) = toGregorian day
     monthLen = gregorianMonthLength y m
   in
    map (fromGregorian y m) [1..monthLen]

@@ -8,14 +8,12 @@ module HipWorktime.History
          fetchHistory,
        ) where
 
-import qualified Data.ByteString.Lazy.Char8 as BL
-import Data.Time.Calendar
-import Data.Time.Format
-import Data.Time.LocalTime
---import Network.HTTP
-import Network.HTTP.Conduit
-import System.Locale
-import Data.Aeson (FromJSON, ToJSON, decode, encode)
+import Data.Time.Calendar (Day)
+import Data.Time.Format (formatTime)
+import Data.Time.LocalTime (TimeZone, ZonedTime)
+import Network.HTTP.Conduit (simpleHttp)
+import System.Locale (defaultTimeLocale)
+import Data.Aeson (FromJSON, decode)
 import GHC.Generics (Generic)
 
 -- ユーザ (id, name)
@@ -65,27 +63,3 @@ fetchHistory token room day zone =
      case (decode resp :: Maybe History) of
        Just hist -> return $ messages hist
        Nothing -> return []
-
-{-
-キャッシュするファイルのパスを返す。
-url を hash して key にする方法が簡単かな。
--}
-cachePath :: String -> Day -> TimeZone -> FilePath
-cachePath room day zone = "abc"
-       
-{-
-与えられた日付に該当するメッセージ一覧と、与えられた日付のメッセージがすべて
-キャッシュ内に存在していたかを返す。
--}
-readHistoryCache :: String -> Day -> TimeZone -> IO ([Message], Bool)
-readHistoryCache room day zone =
-  undefined
-
-
--- ファイルにキャッシュされたメッセージを読み込む
-readCache :: FilePath -> IO [Message]
-readCache path = undefined
-
--- ファイルにメッセージをキャッシュする
-writeCache :: FilePath -> [Message] -> IO ()
-writeCache path messages = undefined
