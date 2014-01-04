@@ -1,6 +1,6 @@
 import Data.Time.Calendar
 import Data.Time.LocalTime
-import Network.HTTP
+--import Network.HTTP
 import System.Environment
 import System.FilePath
 import Text.Read
@@ -9,7 +9,7 @@ import HipWorktime.History
 import HipWorktime.Config
 
 -- 時刻範囲
-data TimeRange = TimeRange LocalTime LocalTime
+data TimeRange = TimeRange LocalTime LocalTime deriving (Show)
 
 {-
 日に対応するメッセージを取得する。
@@ -17,8 +17,14 @@ data TimeRange = TimeRange LocalTime LocalTime
 -}
 fetchMessages :: Day -> IO [Message]
 fetchMessages day = do
-  (token, room) <- readConfig
-  return [Message (LocalTime day (TimeOfDay 0 0 0)) (User "a" "hoge") "aaa"]
+  (token, room, uid) <- readConfig
+  zone <- getCurrentTimeZone
+  messages <- fetchHistory token room day zone
+  return (filter isMine messages)
+    where
+      isMine message = case message of
+        Message _ (User uid _) _ -> True
+        _ -> False
 
 {-
 時刻範囲を取り出す
@@ -35,8 +41,8 @@ normalize = undefined
 {-
 コマンドライン引き数で指定された月の1日を返す
 -}
-getDay :: IO (Maybe Day)
-getDay = do
+getDayFromArg :: IO (Maybe Day)
+getDayFromArg = do
   maybeInts <- fmap (map readMaybe) getArgs :: IO [Maybe Int]
   case maybeInts of
     [Just y, Just m] -> return (fromGregorianValid (toInteger y) m 1)
@@ -53,18 +59,24 @@ getMonthDays day =
   in
    map (fromGregorian y m) [1..monthLen]
 
+{-
 fetch :: IO String
 fetch = do
       rsp <- Network.HTTP.simpleHTTP (getRequest "http://www.google.co.jp/")
               -- fetch document and return it (as a 'String'.)
       getResponseBody rsp
       -- fmap (take 100) (getResponseBody rsp)
+-}
 
 main :: IO()
 main =  do
-  day <- getDay
+  day <- getDayFromArg
   case day of
     Just d -> do
-       messages <- mapM fetchMessages $ getMonthDays d
-       print messages
-    Nothing -> putStrLn "Invalid day. Input year and month."
+       messagess <- mapM fetchMessages $ getMonthDays d
+       let
+         timeRangess = map extractTimeRange messagess
+         normalss = map normalize timeRangess in
+         print normalss
+
+    Nothing -> putStrLn "Invalid day. Pass year and month."
