@@ -1,7 +1,7 @@
 name:          hipworktime
 version:       0.1
 license:       BSD3
-cabal-version: >= 1.10
+cabal-version: >=1.10
 license-file:  LICENSE
 author:        Takashi Kawachi
 maintainer:    Takashi Kawachi <tkawachi@gmail.com>
@@ -11,7 +11,7 @@ bug-reports:   http://github.com/tkawachi/hipworktime/issues
 copyright:     Copyright (C) 2013-2014 Takashi Kawachi
 synopsis:      hipworktime
 description:   hipworktime
-build-type:    Custom
+build-type:    Simple
 
 extra-source-files:
   .ghci
