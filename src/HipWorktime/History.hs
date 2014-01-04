@@ -10,11 +10,15 @@ module HipWorktime.History
 
 import Data.Time.Calendar (Day)
 import Data.Time.Format (formatTime)
-import Data.Time.LocalTime (TimeZone, ZonedTime)
+import Data.Time.LocalTime (
+  TimeZone, ZonedTime (ZonedTime), TimeOfDay (TimeOfDay),
+  LocalTime (LocalTime), getZonedTime, zonedTimeToUTC
+  )
 import Network.HTTP.Conduit (simpleHttp)
 import System.Locale (defaultTimeLocale)
 import Data.Aeson (FromJSON, decode)
 import GHC.Generics (Generic)
+import Data.ByteString.Lazy.Internal (ByteString)
 
 -- ユーザ (id, name)
 data User = User {
@@ -51,6 +55,16 @@ historyUrl token room day zone =
    "&auth_token=" ++ token
 
 {-
+現在時刻 now において day がすでに過ぎた日であるか？
+-}
+isOverDay :: ZonedTime -> Day -> TimeZone -> Bool
+isOverDay now day zone =
+  let
+    endOfDay = ZonedTime (LocalTime day (TimeOfDay 23 59 60)) zone
+  in
+   (zonedTimeToUTC now) > (zonedTimeToUTC endOfDay)
+
+{-
 特定日の履歴を得る。
 -}
 fetchHistory :: String -> String -> Day -> TimeZone -> IO [Message]
@@ -59,7 +73,21 @@ fetchHistory token room day zone =
     urlStr = historyUrl token room day zone
   in
    do
-     resp <- simpleHttp urlStr
+     now <- getZonedTime
+     let
+       -- 現在時刻が指定日を超えていたら、キャッシュを作成する
+       makeCache = isOverDay now day zone
+     resp <- cachedSimpleHttp urlStr makeCache
      case (decode resp :: Maybe History) of
        Just hist -> return $ messages hist
        Nothing -> return []
+
+{-
+url にアクセスして結果を返す。
+ただしキャッシュがあればそれを優先して返す。
+makeCache が True ならば今回の結果をキャッシュする。
+-}
+cachedSimpleHttp :: String -> Bool -> IO ByteString
+cachedSimpleHttp url makeCache =
+  -- TODO use cache
+  simpleHttp url
