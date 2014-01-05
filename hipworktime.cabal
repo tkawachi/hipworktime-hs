@@ -37,7 +37,8 @@ executable hipworktime
       directory,
       old-locale >= 1.0,
       aeson >= 0.6.2,
-      bytestring
+      bytestring,
+      SHA >= 1.6 && < 1.7
 
 test-suite doctests
   type:    exitcode-stdio-1.0

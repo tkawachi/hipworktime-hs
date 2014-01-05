@@ -11,13 +11,25 @@ import HipWorktime.Config (readConfig)
 -- 時刻範囲
 data TimeRange = TimeRange LocalTime LocalTime deriving (Show)
 
+{-
+メッセージが自分のものか？
+-}
 isMyMessage :: String -> Message -> Bool
-isMyMessage uid message = case message of
-  Message _ (User uid' _) _ | uid' == uid -> True
+isMyMessage name message = case message of
+  Message _ (User name' _) _ | name' == name -> True
   _ -> False
 
 {-
-日に対応するメッセージを取得する。
+開始、終了を表すメッセージか？
+-}
+isInOutMessage :: Message -> Bool
+isInOutMessage message = case message of
+  Message _ _ "in" -> True
+  Message _ _ "out" -> True
+  _ -> False
+
+{-
+日に対応する自分のメッセージを取得する。
 システムのタイムゾーンを用いる。
 -}
 fetchMessages :: Day -> IO [Message]
@@ -25,7 +37,7 @@ fetchMessages day = do
   (token, room, uid) <- readConfig
   zone <- getCurrentTimeZone
   messages <- fetchHistory token room day zone
-  return (filter (isMyMessage uid) messages)
+  return $ filter (isMyMessage uid) messages
 
 {-
 時刻範囲を取り出す
@@ -75,9 +87,10 @@ main =  do
   case day of
     Just d -> do
        messagess <- mapM fetchMessages $ getMonthDays d
+       print messagess
        let
          timeRangess = map extractTimeRange messagess
-         normalss = map normalize timeRangess in
-         print normalss
+         normalss = map normalize timeRangess
+       print normalss
 
     Nothing -> putStrLn "Invalid day. Pass year and month."

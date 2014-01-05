@@ -6,19 +6,29 @@ module HipWorktime.History
          Message(Message),
          History,
          fetchHistory,
+         getCacheFilePath
        ) where
 
 import Data.Time.Calendar (Day)
 import Data.Time.Format (formatTime)
 import Data.Time.LocalTime (
   TimeZone, ZonedTime (ZonedTime), TimeOfDay (TimeOfDay),
-  LocalTime (LocalTime), getZonedTime, zonedTimeToUTC
+  LocalTime (LocalTime), zonedTimeToUTC
   )
+import Data.Time.Clock (UTCTime, getCurrentTime)
 import Network.HTTP.Conduit (simpleHttp)
 import System.Locale (defaultTimeLocale)
+import System.Directory (
+  getHomeDirectory, createDirectoryIfMissing, doesFileExist
+  )
 import Data.Aeson (FromJSON, decode)
 import GHC.Generics (Generic)
-import Data.ByteString.Lazy.Internal (ByteString)
+import Data.Digest.Pure.SHA (sha256, showDigest)
+import qualified Data.ByteString.Lazy.Char8 as C (
+  ByteString, pack, fromStrict, toStrict
+  )
+import qualified Data.ByteString as BS (readFile, writeFile)
+import Control.Monad (when)
 
 -- ユーザ (id, name)
 data User = User {
@@ -57,12 +67,12 @@ historyUrl token room day zone =
 {-
 現在時刻 now において day がすでに過ぎた日であるか？
 -}
-isOverDay :: ZonedTime -> Day -> TimeZone -> Bool
+isOverDay :: UTCTime -> Day -> TimeZone -> Bool
 isOverDay now day zone =
   let
     endOfDay = ZonedTime (LocalTime day (TimeOfDay 23 59 60)) zone
   in
-   zonedTimeToUTC now > zonedTimeToUTC endOfDay
+   now > zonedTimeToUTC endOfDay
 
 {-
 特定日の履歴を得る。
@@ -73,7 +83,7 @@ fetchHistory token room day zone =
     urlStr = historyUrl token room day zone
   in
    do
-     now <- getZonedTime
+     now <- getCurrentTime
      let
        -- 現在時刻が指定日を超えていたら、キャッシュを作成する
        makeCache = isOverDay now day zone
@@ -87,7 +97,52 @@ url にアクセスして結果を返す。
 ただしキャッシュがあればそれを優先して返す。
 makeCache が True ならば今回の結果をキャッシュする。
 -}
-cachedSimpleHttp :: String -> Bool -> IO ByteString
-cachedSimpleHttp url makeCache =
-  -- TODO use cache
-  simpleHttp url
+cachedSimpleHttp :: String -> Bool -> IO C.ByteString
+cachedSimpleHttp url makeCache = do
+  cached <- readCache url
+  case cached of
+    Just contents -> return contents
+    Nothing -> do
+      contents <- simpleHttp url
+      when makeCache (writeCache url contents)
+      return contents
+{-
+URLに対応するキャッシュを読み込む。
+-}
+readCache :: String -> IO (Maybe C.ByteString)
+readCache url = do
+  cacheFilePath <- getCacheFilePath url
+  exists <- doesFileExist cacheFilePath
+  case exists of
+    True -> do
+      contents <- BS.readFile cacheFilePath
+      return $ Just $ C.fromStrict contents
+    False -> return Nothing
+
+{-
+URLに対応するキャッシュを書き込む。
+-}
+writeCache :: String -> C.ByteString -> IO()
+writeCache url contents = do
+  createCacheDir
+  cacheFilePath <- getCacheFilePath url
+  BS.writeFile cacheFilePath $ C.toStrict contents
+
+{-|
+キャッシュ用ディレクトリを取得する。
+-}
+getCacheDir :: IO FilePath
+getCacheDir = do
+  home <- getHomeDirectory
+  return $ home ++ "/.hipworktime-hs/cache"
+
+createCacheDir :: IO ()
+createCacheDir = do
+  cacheDir <- getCacheDir
+  createDirectoryIfMissing True cacheDir
+
+getCacheFilePath :: String -> IO FilePath
+getCacheFilePath url = do
+  cacheDir <- getCacheDir
+  return $ cacheDir ++ "/" ++ (showDigest $ sha256 (C.pack url))
+
