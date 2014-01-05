@@ -34,7 +34,7 @@ import Control.Monad (when)
 data User = User {
   name :: String,
   user_id :: Int
-  } deriving (Show, Generic)
+  } deriving (Show, Generic, Eq)
 
 -- メッセージ
 data Message = Message {
@@ -50,6 +50,11 @@ data History = History {
 instance FromJSON History
 instance FromJSON Message
 instance FromJSON User
+
+instance Eq Message where
+  (==) m1 m2 =
+    zonedTimeToUTC (date m1) == zonedTimeToUTC (date m2) &&
+    from m1 == from m2 && message m1 == message m2
 
 {-
 履歴を取得するための URL 文字列を得る。
