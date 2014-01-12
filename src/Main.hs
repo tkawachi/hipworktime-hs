@@ -31,7 +31,7 @@ endTimeRange (TimeRange startTime seconds) = utcToZonedTime zone endUTC
 
 showTimeRange :: TimeRange -> String
 showTimeRange timeRange@(TimeRange startTime _) =
-  "TimeRange " ++ (show startTime) ++ " ~ " ++ (show (endTimeRange timeRange))
+  "TimeRange " ++ show startTime ++ " ~ " ++ show (endTimeRange timeRange)
 
 {-
 メッセージが自分のものか？
@@ -55,15 +55,13 @@ data MsgType = InMsg | OutMsg | OtherMsg
 
 msgType :: Message -> MsgType
 msgType message =
-  case isIn message of
-    True -> InMsg
-    False -> case isOut message of
-      True -> OutMsg
-      False -> OtherMsg
+  case (isIn message, isOut message) of
+    (True, _) -> InMsg
+    (_, True) -> OutMsg
+    _ -> OtherMsg
 
 messageTime :: Message -> ZonedTime
-messageTime message = case message of
-  Message zonedTime _ _ -> zonedTime
+messageTime (Message zonedTime _ _) = zonedTime
 
 secondsBetween :: Message -> Message -> NominalDiffTime
 secondsBetween msg1 msg2 = abs diff
@@ -110,7 +108,7 @@ extractTimeRange msgs = reverse $ processMsg msgs Nothing Nothing Nothing []
               processMsg xs (Just x) (Just x) (Just x) (newRange:ranges)
               where newRange = buildTimeRange inMsg' lastMsg'
           (Nothing, _) -> processMsg xs (Just x) (Just x) (Just x) ranges
-          (Just _, Nothing) -> error("should not be happened")
+          (Just _, Nothing) -> error "should not be happened"
         OutMsg -> processMsg xs Nothing Nothing Nothing newRanges
           where maybeNewRange = case inMsg of
                   Just inMsg' -> Just $ buildTimeRange inMsg' x
@@ -126,7 +124,7 @@ extractTimeRange msgs = reverse $ processMsg msgs Nothing Nothing Nothing []
                 firstMsg' = firstMsg `orElse` Just x
       [] -> case (inMsg, lastMsg) of
         (Just inMsg', Just lastMsg') | inMsg' /= lastMsg' ->
-          (buildTimeRange inMsg' lastMsg'):ranges
+          buildTimeRange inMsg' lastMsg' : ranges
         _ -> ranges
 {-
 時刻範囲を正規化する
