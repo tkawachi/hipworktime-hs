@@ -3,7 +3,10 @@ import Data.Time.Calendar (
   Day, fromGregorianValid, toGregorian, gregorianMonthLength, fromGregorian
   )
 import Data.Time.LocalTime (
-  ZonedTime, getCurrentTimeZone, zonedTimeToUTC, utcToZonedTime, zonedTimeZone
+  ZonedTime (ZonedTime), getCurrentTimeZone, zonedTimeToUTC, utcToZonedTime,
+  zonedTimeZone, zonedTimeToLocalTime, localDay,
+  TimeOfDay (TimeOfDay),
+  LocalTime (LocalTime)
   )
 import System.Environment (getArgs)
 import Text.Read (readMaybe)
@@ -15,7 +18,7 @@ import Data.Generics.Aliases (orElse)
 時刻範囲。
 開始時刻と終了までの秒数で表現する。
 -}
-data TimeRange = TimeRange ZonedTime NominalDiffTime
+data TimeRange = TimeRange { timeRangeStart :: ZonedTime, timeRangeDuration :: NominalDiffTime }
 
 instance Show TimeRange where
   show = showTimeRange
@@ -95,6 +98,7 @@ extractTimeRange msgs = reverse $ processMsg msgs Nothing Nothing Nothing []
     -- inMsg: in メッセージ
     -- firstMsg: 今期間最初のメッセージ
     -- lastMsg: 今期間最後のメッセージ
+    -- ranges: これまでに取り出した時刻範囲群
     processMsg :: [Message] -> Maybe Message -> Maybe Message -> Maybe Message -> [TimeRange] -> [TimeRange]
     processMsg msgs' inMsg firstMsg lastMsg ranges = case msgs' of
       x:xs -> case msgType x of
@@ -126,11 +130,25 @@ extractTimeRange msgs = reverse $ processMsg msgs Nothing Nothing Nothing []
         (Just inMsg', Just lastMsg') | inMsg' /= lastMsg' ->
           buildTimeRange inMsg' lastMsg' : ranges
         _ -> ranges
+
+changeHourMin :: ZonedTime -> Int -> Int -> ZonedTime
+changeHourMin zonedTime newHour newMin = ZonedTime newLocalTime zone
+  where
+    localTime = zonedTimeToLocalTime zonedTime
+    day = localDay localTime
+    newTod = TimeOfDay newHour newMin 0
+    newLocalTime = LocalTime day newTod
+    zone = zonedTimeZone zonedTime
+
 {-
-時刻範囲を正規化する
+時刻範囲を正規化する。
 -}
 normalize :: [TimeRange] -> [TimeRange]
-normalize = undefined
+normalize ranges = [TimeRange startTime sumDuration]
+  where
+    sumDuration = sum $ map timeRangeDuration ranges
+    realStartTime = timeRangeStart $ head ranges
+    startTime = changeHourMin realStartTime 9 0
 
 {-
 コマンドライン引き数で指定された月の1日を返す
@@ -161,7 +179,7 @@ main =  do
        messagess <- mapM fetchMessages $ getMonthDays d
        let
          timeRangess = map extractTimeRange messagess
-         --normalss = map normalize timeRangess
-       print timeRangess
+         normalss = map normalize timeRangess
+       print normalss
 
     Nothing -> putStrLn "Invalid day. Pass year and month."
