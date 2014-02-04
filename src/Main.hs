@@ -144,6 +144,7 @@ changeHourMin zonedTime newHour newMin = ZonedTime newLocalTime zone
 時刻範囲を正規化する。
 -}
 normalize :: [TimeRange] -> [TimeRange]
+normalize [] = []
 normalize ranges = [TimeRange startTime sumDuration]
   where
     sumDuration = sum $ map timeRangeDuration ranges
@@ -180,6 +181,7 @@ main =  do
        let
          timeRangess = map extractTimeRange messagess
          normalss = map normalize timeRangess
-       print normalss
+         zipped = zip normalss timeRangess
+       mapM_ print zipped
 
     Nothing -> putStrLn "Invalid day. Pass year and month."
